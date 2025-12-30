@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minimal Todo</title>
     <style>
-        /* --- CSS STYLES --- */
+        /* --- BASE STYLES --- */
         body {
             background-color: #f8f9fa;
             display: flex;
@@ -13,14 +13,13 @@
             padding-top: 50px;
             margin: 0;
             color: #333;
-            /* Using Courier New as requested */
             font-family: 'Courier New', Courier, monospace;
         }
 
         .container {
             background: white;
             width: 90%;
-            max-width: 500px; /* Widened slightly to fit date */
+            max-width: 500px;
             padding: 2rem;
             border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.05);
@@ -32,28 +31,29 @@
             color: #2c3e50;
         }
 
-        /* --- INPUT GROUP (Add New) --- */
+        /* --- INPUT GROUP (The Add Section) --- */
         .input-group {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
-            align-items: center; /* Aligns inputs vertically */
+            align-items: center;
+            /* Allow items to wrap to the next line if needed */
+            flex-wrap: wrap; 
         }
 
         .js-todoItem {
-            flex-grow: 2; /* Text takes more space */
+            flex-grow: 2;
             padding: 10px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 1rem;
             outline: none;
-            font-family: inherit; /* Inherit Courier */
+            font-family: inherit;
         }
 
-        /* NEW: Date Input Styling */
         .js-todoDate {
             flex-grow: 1;
-            padding: 9px; /* slightly less padding to match height */
+            padding: 9px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-family: inherit;
@@ -68,7 +68,7 @@
             color: white;
             border: none;
             padding: 0 20px;
-            height: 42px; /* Fixed height to match inputs */
+            height: 42px;
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
@@ -84,13 +84,12 @@
             align-items: center;
             padding: 12px 0;
             border-bottom: 1px solid #f0f0f0;
-            min-height: 40px; 
             animation: fadeIn 0.3s ease;
         }
 
         .todo-content {
             display: flex;
-            flex-direction: column; /* Stack text and date on mobile */
+            flex-direction: column;
             flex-grow: 1;
             margin-right: 10px;
         }
@@ -107,16 +106,18 @@
             margin-top: 4px;
         }
 
-        /* --- EDIT MODE INPUTS --- */
+        /* --- EDIT MODE --- */
         .edit-container {
             display: flex;
             gap: 5px;
             flex-grow: 1;
             margin-right: 10px;
+            flex-wrap: wrap; /* Allows stacking in edit mode too */
         }
 
         .edit-input-text {
             flex-grow: 2;
+            width: 100%; /* Default to full width for stacking safety */
             padding: 5px;
             border: 1px solid #3b82f6;
             border-radius: 4px;
@@ -125,7 +126,6 @@
 
         .edit-input-date {
             flex-grow: 1;
-            width: 110px; /* Fixed width for date in edit mode */
             padding: 5px;
             border: 1px solid #3b82f6;
             border-radius: 4px;
@@ -146,19 +146,52 @@
             padding: 5px;
             font-size: 1.2rem;
             line-height: 1;
-            transition: transform 0.2s;
         }
-        .icon-btn:hover { transform: scale(1.1); }
-
-        .delete-btn { color: #ccc; }
         .delete-btn:hover { color: #ff4d4d; }
-        .edit-btn { color: #ccc; }
         .edit-btn:hover { color: #3b82f6; } 
         .save-btn { color: #2ecc71; } 
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- MOBILE RESPONSIVE TWEAKS --- */
+        /* This applies ONLY when screen is smaller than 500px */
+        @media (max-width: 500px) {
+            
+            /* 1. Stack the Add Section */
+            .js-todoItem {
+                width: 100%; /* Text input takes entire top row */
+                order: 1;    /* Force it to be first */
+            }
+
+            .js-todoDate {
+                flex-grow: 1;
+                order: 2;    /* Date is second */
+            }
+
+            .add-btn {
+                order: 3;    /* Button is third */
+            }
+
+            /* 2. Stack the Edit Section */
+            .edit-container {
+                flex-direction: column; /* Stack inputs vertically */
+            }
+            
+            .edit-input-text {
+                margin-bottom: 5px; /* Add space between text and date */
+            }
+            
+            /* 3. Adjust Todo Item Layout */
+            .todo-item {
+                align-items: flex-start; /* Align content to top */
+            }
+            
+            .action-buttons {
+                margin-top: 5px; /* Small gap for buttons */
+            }
         }
     </style>
 </head>
@@ -180,17 +213,14 @@
     </div>
 
     <script>
-        // 1. DATA: Load List
-        // Note: Because we changed the data structure, old string-only todos might break.
-        // This line is a safety check.
-        let rawData = JSON.parse(localStorage.getItem('todoList')) || [];
+        // --- JAVASCRIPT (Same as before) ---
         
-        // Convert old data (strings) to new data (objects) if necessary
+        let rawData = JSON.parse(localStorage.getItem('todoList')) || [];
         let todoList = rawData.map(item => {
             if (typeof item === 'string') {
-                return { text: item, dueDate: '' }; // Convert old string to object
+                return { text: item, dueDate: '' };
             }
-            return item; // Keep valid objects
+            return item;
         });
 
         let editingIndex = -1; 
@@ -201,23 +231,18 @@
             let todoListHTML = '';
 
             for (let i = 0; i < todoList.length; i++) {
-                const todoObject = todoList[i];
-                // Extract text and date from object
-                const { text, dueDate } = todoObject; 
-
+                const { text, dueDate } = todoList[i]; 
                 let html = '';
 
-                // --- EDIT MODE ---
                 if (i === editingIndex) {
                     html = `
                         <div class="todo-item">
                             <div class="edit-container">
-                                <input class="edit-input-text js-edit-text-${i}" value="${text}" 
-                                    placeholder="Task"
-                                    onkeydown="if(event.key === 'Enter') saveEdit(${i});">
+                                <input class="edit-input-text js-edit-text-${i}" value="${text}" placeholder="Task"
+                                onkeydown="if(event.key === 'Enter') saveEdit(${i});">
                                 
                                 <input type="date" class="edit-input-date js-edit-date-${i}" value="${dueDate}"
-                                    onkeydown="if(event.key === 'Enter') saveEdit(${i});">
+                                onkeydown="if(event.key === 'Enter') saveEdit(${i});">
                             </div>
                             
                             <div class="action-buttons">
@@ -226,9 +251,7 @@
                             </div>
                         </div>
                     `;
-                } 
-                // --- VIEW MODE ---
-                else {
+                } else {
                     html = `
                         <div class="todo-item">
                             <div class="todo-content">
@@ -242,32 +265,24 @@
                         </div>
                     `;
                 }
-                
                 todoListHTML += html;
             }
-
             document.querySelector('.js-todo-list').innerHTML = todoListHTML;
         }
 
         function addTodo() {
             const inputElement = document.querySelector('.js-todoItem');
             const dateElement = document.querySelector('.js-todoDate');
-            
             const todoText = inputElement.value.trim();
-            const todoDate = dateElement.value; // Get the date value
+            const todoDate = dateElement.value;
 
             if (todoText === '') return;
 
-            // SAVE AS OBJECT
-            todoList.push({
-                text: todoText,
-                dueDate: todoDate
-            });
-
+            todoList.push({ text: todoText, dueDate: todoDate });
             saveToStorage();
             
             inputElement.value = '';
-            dateElement.value = ''; // Clear date input
+            dateElement.value = ''; 
             renderTodos();
         }
 
@@ -280,7 +295,6 @@
         function enableEditMode(index) {
             editingIndex = index; 
             renderTodos(); 
-            
             setTimeout(() => {
                 const input = document.querySelector(`.js-edit-text-${index}`);
                 input.focus();
@@ -289,7 +303,6 @@
         }
 
         function saveEdit(index) {
-            // Get values from BOTH inputs
             const textInput = document.querySelector(`.js-edit-text-${index}`);
             const dateInput = document.querySelector(`.js-edit-date-${index}`);
             
@@ -297,14 +310,9 @@
             const newDate = dateInput.value;
 
             if (newText !== '') {
-                // Update object with both properties
-                todoList[index] = {
-                    text: newText,
-                    dueDate: newDate
-                };
+                todoList[index] = { text: newText, dueDate: newDate };
                 saveToStorage();
             }
-            
             editingIndex = -1; 
             renderTodos(); 
         }
