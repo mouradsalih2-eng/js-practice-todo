@@ -7,20 +7,20 @@
     <style>
         /* --- CSS STYLES --- */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f8f9fa;
             display: flex;
             justify-content: center;
             padding-top: 50px;
             margin: 0;
             color: #333;
+            /* Using Courier New as requested */
             font-family: 'Courier New', Courier, monospace;
         }
 
         .container {
             background: white;
             width: 90%;
-            max-width: 400px;
+            max-width: 500px; /* Widened slightly to fit date */
             padding: 2rem;
             border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.05);
@@ -30,42 +30,54 @@
             margin-top: 0;
             text-align: center;
             color: #2c3e50;
-            font-family: 'Courier New', Courier, monospace;
         }
 
-        /* Input Group (Top) */
+        /* --- INPUT GROUP (Add New) --- */
         .input-group {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
+            align-items: center; /* Aligns inputs vertically */
         }
 
         .js-todoItem {
-            flex-grow: 1;
-            padding: 12px 15px;
+            flex-grow: 2; /* Text takes more space */
+            padding: 10px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.2s;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: inherit; /* Inherit Courier */
         }
 
-        .js-todoItem:focus { border-color: #3b82f6; }
+        /* NEW: Date Input Styling */
+        .js-todoDate {
+            flex-grow: 1;
+            padding: 9px; /* slightly less padding to match height */
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            color: #555;
+            cursor: pointer;
+        }
+
+        .js-todoItem:focus, .js-todoDate:focus { border-color: #3b82f6; }
 
         .add-btn {
             background-color: #3b82f6;
             color: white;
             border: none;
             padding: 0 20px;
+            height: 42px; /* Fixed height to match inputs */
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
             transition: background-color 0.2s;
+            font-family: inherit;
         }
         .add-btn:hover { background-color: #2563eb; }
 
-        /* List Items */
+        /* --- LIST ITEMS --- */
         .todo-item {
             display: flex;
             justify-content: space-between;
@@ -76,22 +88,48 @@
             animation: fadeIn 0.3s ease;
         }
 
-        .todo-text {
-            font-size: 1rem;
-            flex-grow: 1; 
+        .todo-content {
+            display: flex;
+            flex-direction: column; /* Stack text and date on mobile */
+            flex-grow: 1;
             margin-right: 10px;
-            word-break: break-all; 
         }
 
-        /* Inline Edit Input */
-        .edit-input {
+        .todo-text {
+            font-size: 1.1rem;
+            font-weight: bold;
+            word-break: break-all;
+        }
+
+        .todo-date-display {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* --- EDIT MODE INPUTS --- */
+        .edit-container {
+            display: flex;
+            gap: 5px;
             flex-grow: 1;
-            font-size: 1rem;
-            padding: 5px;
             margin-right: 10px;
+        }
+
+        .edit-input-text {
+            flex-grow: 2;
+            padding: 5px;
             border: 1px solid #3b82f6;
             border-radius: 4px;
-            outline: none;
+            font-family: inherit;
+        }
+
+        .edit-input-date {
+            flex-grow: 1;
+            width: 110px; /* Fixed width for date in edit mode */
+            padding: 5px;
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            font-family: inherit;
         }
 
         /* Buttons */
@@ -107,17 +145,15 @@
             cursor: pointer;
             padding: 5px;
             font-size: 1.2rem;
-            transition: transform 0.2s, color 0.2s;
             line-height: 1;
+            transition: transform 0.2s;
         }
         .icon-btn:hover { transform: scale(1.1); }
 
         .delete-btn { color: #ccc; }
-        .delete-btn:hover { color: #ff4d4d; opacity: 1; }
-        
+        .delete-btn:hover { color: #ff4d4d; }
         .edit-btn { color: #ccc; }
         .edit-btn:hover { color: #3b82f6; } 
-        
         .save-btn { color: #2ecc71; } 
 
         @keyframes fadeIn {
@@ -132,8 +168,11 @@
         <h2>My Todo</h2>
         
         <div class="input-group">
-            <input type="text" placeholder="Add a new task..." class="js-todoItem" 
-            onkeydown="if (event.key === 'Enter') { addTodo(); }">
+            <input type="text" placeholder="Task..." class="js-todoItem" 
+                onkeydown="if (event.key === 'Enter') { addTodo(); }">
+            
+            <input type="date" class="js-todoDate">
+            
             <button class="add-btn" onclick="addTodo();">Add</button>
         </div>
 
@@ -141,7 +180,19 @@
     </div>
 
     <script>
-        let todoList = JSON.parse(localStorage.getItem('todoList')) || [];
+        // 1. DATA: Load List
+        // Note: Because we changed the data structure, old string-only todos might break.
+        // This line is a safety check.
+        let rawData = JSON.parse(localStorage.getItem('todoList')) || [];
+        
+        // Convert old data (strings) to new data (objects) if necessary
+        let todoList = rawData.map(item => {
+            if (typeof item === 'string') {
+                return { text: item, dueDate: '' }; // Convert old string to object
+            }
+            return item; // Keep valid objects
+        });
+
         let editingIndex = -1; 
 
         renderTodos();
@@ -150,16 +201,24 @@
             let todoListHTML = '';
 
             for (let i = 0; i < todoList.length; i++) {
-                const todo = todoList[i];
+                const todoObject = todoList[i];
+                // Extract text and date from object
+                const { text, dueDate } = todoObject; 
+
                 let html = '';
 
+                // --- EDIT MODE ---
                 if (i === editingIndex) {
-                    // --- CHANGED SECTION START ---
-                    // Added onkeydown to listen for Enter (Save) and Escape (Cancel)
                     html = `
                         <div class="todo-item">
-                            <input class="edit-input js-edit-input-${i}" value="${todo}"
-                            onkeydown="if(event.key === 'Enter') { saveEdit(${i}); } else if(event.key === 'Escape') { cancelEdit(); }">
+                            <div class="edit-container">
+                                <input class="edit-input-text js-edit-text-${i}" value="${text}" 
+                                    placeholder="Task"
+                                    onkeydown="if(event.key === 'Enter') saveEdit(${i});">
+                                
+                                <input type="date" class="edit-input-date js-edit-date-${i}" value="${dueDate}"
+                                    onkeydown="if(event.key === 'Enter') saveEdit(${i});">
+                            </div>
                             
                             <div class="action-buttons">
                                 <button class="icon-btn save-btn" onclick="saveEdit(${i})">✓</button>
@@ -167,11 +226,15 @@
                             </div>
                         </div>
                     `;
-                    // --- CHANGED SECTION END ---
-                } else {
+                } 
+                // --- VIEW MODE ---
+                else {
                     html = `
                         <div class="todo-item">
-                            <span class="todo-text">${todo}</span>
+                            <div class="todo-content">
+                                <span class="todo-text">${text}</span>
+                                <span class="todo-date-display">${dueDate}</span>
+                            </div>
                             <div class="action-buttons">
                                 <button class="icon-btn edit-btn" onclick="enableEditMode(${i})">✎</button>
                                 <button class="icon-btn delete-btn" onclick="deleteTodo(${i})">✕</button>
@@ -188,12 +251,23 @@
 
         function addTodo() {
             const inputElement = document.querySelector('.js-todoItem');
-            const todoText = inputElement.value.trim(); 
+            const dateElement = document.querySelector('.js-todoDate');
+            
+            const todoText = inputElement.value.trim();
+            const todoDate = dateElement.value; // Get the date value
+
             if (todoText === '') return;
 
-            todoList.push(todoText);
+            // SAVE AS OBJECT
+            todoList.push({
+                text: todoText,
+                dueDate: todoDate
+            });
+
             saveToStorage();
+            
             inputElement.value = '';
+            dateElement.value = ''; // Clear date input
             renderTodos();
         }
 
@@ -208,19 +282,26 @@
             renderTodos(); 
             
             setTimeout(() => {
-                const input = document.querySelector(`.js-edit-input-${index}`);
+                const input = document.querySelector(`.js-edit-text-${index}`);
                 input.focus();
-                // Optional: Select all text so you can overwrite easily
                 input.select(); 
             }, 0);
         }
 
         function saveEdit(index) {
-            const editInputElement = document.querySelector(`.js-edit-input-${index}`);
-            const newText = editInputElement.value.trim();
+            // Get values from BOTH inputs
+            const textInput = document.querySelector(`.js-edit-text-${index}`);
+            const dateInput = document.querySelector(`.js-edit-date-${index}`);
+            
+            const newText = textInput.value.trim();
+            const newDate = dateInput.value;
 
             if (newText !== '') {
-                todoList[index] = newText; 
+                // Update object with both properties
+                todoList[index] = {
+                    text: newText,
+                    dueDate: newDate
+                };
                 saveToStorage();
             }
             
