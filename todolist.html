@@ -40,13 +40,11 @@
             flex-wrap: wrap; 
         }
 
-        /* FIX 1 & 2: Mobile Background & Appearance 
-           We target all inputs to reset iOS default styles 
-        */
+        /* RESET iOS STYLES */
         input {
-            -webkit-appearance: none; /* Removes iOS internal shadow/grey/gloss */
+            -webkit-appearance: none;
             appearance: none;
-            background-color: white;  /* Forces white background */
+            background-color: white;
         }
 
         .js-todoItem {
@@ -59,6 +57,7 @@
             font-family: inherit;
         }
 
+        /* --- THE MAGIC DATE INPUT STYLES --- */
         .js-todoDate {
             flex-grow: 1;
             padding: 9px;
@@ -67,8 +66,34 @@
             font-family: inherit;
             color: #555;
             cursor: pointer;
-            /* Ensure min-width so placeholder fits */
             min-width: 130px; 
+            position: relative; /* Needed for the fake placeholder */
+        }
+
+        /* STATE 1: EMPTY (The Placeholder View) */
+        /* We hide the default "--/--/----" text */
+        .js-todoDate:required:invalid::-webkit-datetime-edit {
+            color: transparent;
+        }
+        /* We show the text from the 'placeholder' attribute */
+        .js-todoDate:required:invalid::before {
+            content: attr(placeholder);
+            color: #888;
+            position: absolute;
+            left: 10px;
+        }
+
+        /* STATE 2: FILLED or FOCUSED (The Date View) */
+        /* We show the real date text */
+        .js-todoDate:required:valid::-webkit-datetime-edit,
+        .js-todoDate:focus::-webkit-datetime-edit {
+            color: #555; 
+        }
+        /* We hide the fake placeholder */
+        .js-todoDate:required:valid::before,
+        .js-todoDate:focus::before {
+            content: "";
+            display: none;
         }
 
         .js-todoItem:focus, .js-todoDate:focus { border-color: #3b82f6; }
@@ -84,7 +109,7 @@
             cursor: pointer;
             transition: background-color 0.2s;
             font-family: inherit;
-            -webkit-appearance: none; /* Fix for button on iOS too */
+            -webkit-appearance: none;
         }
         .add-btn:hover { background-color: #2563eb; }
 
@@ -141,7 +166,7 @@
             border: 1px solid #3b82f6;
             border-radius: 4px;
             font-family: inherit;
-            background-color: white; /* Explicit white for edit mode too */
+            background-color: white;
         }
 
         .action-buttons {
@@ -188,12 +213,11 @@
             <input type="text" placeholder="Task..." class="js-todoItem" 
                 onkeydown="if (event.key === 'Enter') { addTodo(); }">
             
-           <input 
-                placeholder="Pick a date..." 
+            <input 
+                type="date" 
                 class="js-todoDate" 
-                type="text" 
-                onfocus="(this.type='date'); try { this.showPicker(); } catch(e) {}" 
-                onblur="if(!this.value)this.type='text'"
+                placeholder="Pick a date..." 
+                required
             >
             
             <button class="add-btn" onclick="addTodo();">Add</button>
@@ -203,9 +227,9 @@
     </div>
 
     <script>
-        // --- JAVASCRIPT (Unchanged) ---
-        
         let rawData = JSON.parse(localStorage.getItem('todoList')) || [];
+        
+        // Data Migration (Strings -> Objects)
         let todoList = rawData.map(item => {
             if (typeof item === 'string') {
                 return { text: item, dueDate: '' };
@@ -225,6 +249,7 @@
                 let html = '';
 
                 if (i === editingIndex) {
+                    // Edit Mode
                     html = `
                         <div class="todo-item">
                             <div class="edit-container">
@@ -242,6 +267,7 @@
                         </div>
                     `;
                 } else {
+                    // View Mode
                     html = `
                         <div class="todo-item">
                             <div class="todo-content">
@@ -273,9 +299,8 @@
             
             inputElement.value = '';
             
-            // Reset date input: Clear value AND switch type back to text to show placeholder
+            // CLEAN RESET: Just clear value. The CSS 'required' rule handles the rest.
             dateElement.value = ''; 
-            dateElement.type = 'text'; 
 
             renderTodos();
         }
