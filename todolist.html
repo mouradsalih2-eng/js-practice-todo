@@ -188,11 +188,11 @@
             <input type="text" placeholder="Task..." class="js-todoItem" 
                 onkeydown="if (event.key === 'Enter') { addTodo(); }">
             
-            <input 
+           <input 
                 placeholder="Pick a date..." 
                 class="js-todoDate" 
                 type="text" 
-                onfocus="(this.type='date')" 
+                onfocus="(this.type='date'); try { this.showPicker(); } catch(e) {}" 
                 onblur="if(!this.value)this.type='text'"
             >
             
