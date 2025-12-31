@@ -31,14 +31,22 @@
             color: #2c3e50;
         }
 
-        /* --- INPUT GROUP (The Add Section) --- */
+        /* --- INPUT GROUP --- */
         .input-group {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
             align-items: center;
-            /* Allow items to wrap to the next line if needed */
             flex-wrap: wrap; 
+        }
+
+        /* FIX 1 & 2: Mobile Background & Appearance 
+           We target all inputs to reset iOS default styles 
+        */
+        input {
+            -webkit-appearance: none; /* Removes iOS internal shadow/grey/gloss */
+            appearance: none;
+            background-color: white;  /* Forces white background */
         }
 
         .js-todoItem {
@@ -59,6 +67,8 @@
             font-family: inherit;
             color: #555;
             cursor: pointer;
+            /* Ensure min-width so placeholder fits */
+            min-width: 130px; 
         }
 
         .js-todoItem:focus, .js-todoDate:focus { border-color: #3b82f6; }
@@ -74,6 +84,7 @@
             cursor: pointer;
             transition: background-color 0.2s;
             font-family: inherit;
+            -webkit-appearance: none; /* Fix for button on iOS too */
         }
         .add-btn:hover { background-color: #2563eb; }
 
@@ -112,12 +123,12 @@
             gap: 5px;
             flex-grow: 1;
             margin-right: 10px;
-            flex-wrap: wrap; /* Allows stacking in edit mode too */
+            flex-wrap: wrap;
         }
 
         .edit-input-text {
             flex-grow: 2;
-            width: 100%; /* Default to full width for stacking safety */
+            width: 100%;
             padding: 5px;
             border: 1px solid #3b82f6;
             border-radius: 4px;
@@ -130,9 +141,9 @@
             border: 1px solid #3b82f6;
             border-radius: 4px;
             font-family: inherit;
+            background-color: white; /* Explicit white for edit mode too */
         }
 
-        /* Buttons */
         .action-buttons {
             display: flex;
             gap: 5px;
@@ -156,42 +167,15 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- MOBILE RESPONSIVE TWEAKS --- */
-        /* This applies ONLY when screen is smaller than 500px */
+        /* --- MOBILE RESPONSIVE --- */
         @media (max-width: 500px) {
-            
-            /* 1. Stack the Add Section */
-            .js-todoItem {
-                width: 100%; /* Text input takes entire top row */
-                order: 1;    /* Force it to be first */
-            }
-
-            .js-todoDate {
-                flex-grow: 1;
-                order: 2;    /* Date is second */
-            }
-
-            .add-btn {
-                order: 3;    /* Button is third */
-            }
-
-            /* 2. Stack the Edit Section */
-            .edit-container {
-                flex-direction: column; /* Stack inputs vertically */
-            }
-            
-            .edit-input-text {
-                margin-bottom: 5px; /* Add space between text and date */
-            }
-            
-            /* 3. Adjust Todo Item Layout */
-            .todo-item {
-                align-items: flex-start; /* Align content to top */
-            }
-            
-            .action-buttons {
-                margin-top: 5px; /* Small gap for buttons */
-            }
+            .js-todoItem { width: 100%; order: 1; }
+            .js-todoDate { flex-grow: 1; order: 2; }
+            .add-btn { order: 3; }
+            .edit-container { flex-direction: column; }
+            .edit-input-text { margin-bottom: 5px; }
+            .todo-item { align-items: flex-start; }
+            .action-buttons { margin-top: 5px; }
         }
     </style>
 </head>
@@ -204,7 +188,13 @@
             <input type="text" placeholder="Task..." class="js-todoItem" 
                 onkeydown="if (event.key === 'Enter') { addTodo(); }">
             
-            <input type="date" class="js-todoDate">
+            <input 
+                placeholder="Pick a date..." 
+                class="js-todoDate" 
+                type="text" 
+                onfocus="(this.type='date')" 
+                onblur="if(!this.value)this.type='text'"
+            >
             
             <button class="add-btn" onclick="addTodo();">Add</button>
         </div>
@@ -213,7 +203,7 @@
     </div>
 
     <script>
-        // --- JAVASCRIPT (Same as before) ---
+        // --- JAVASCRIPT (Unchanged) ---
         
         let rawData = JSON.parse(localStorage.getItem('todoList')) || [];
         let todoList = rawData.map(item => {
@@ -282,7 +272,11 @@
             saveToStorage();
             
             inputElement.value = '';
+            
+            // Reset date input: Clear value AND switch type back to text to show placeholder
             dateElement.value = ''; 
+            dateElement.type = 'text'; 
+
             renderTodos();
         }
 
